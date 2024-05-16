@@ -159,3 +159,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 .DS_Store
+
+# data
+udacity-nd009t-C2-Developing-ML-Workflow-master/data/aclImdb_v1.tar.gz
