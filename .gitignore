@@ -162,3 +162,5 @@ cython_debug/
 
 # data
 udacity-nd009t-C2-Developing-ML-Workflow-master/data/aclImdb_v1.tar.gz
+udacity-nd009t-C2-Developing-ML-Workflow-master/data/aclImdb/test/
+udacity-nd009t-C2-Developing-ML-Workflow-master/data/aclImdb/train/
