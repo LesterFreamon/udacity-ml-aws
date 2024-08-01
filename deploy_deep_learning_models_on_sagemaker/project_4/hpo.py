@@ -49,7 +49,6 @@ def test(model, test_loader, criterion, device):
         hook.register_loss(criterion)
 
     
-    hook.register_forward_hook("all")  # Capture all forward passes during evaluation
 
 
     model.eval()
@@ -70,8 +69,11 @@ def test(model, test_loader, criterion, device):
             total += labels.size(0)
     average_loss = test_loss / len(test_loader)
     accuracy = 100.0 * correct / total
-    hook.save_scalar("accuracy", accuracy)
-    hook.save_scalar("average_loss", average_loss)
+    if hook:
+        hook.save_scalar("accuracy", accuracy)
+        hook.save_scalar("average_loss", average_loss)
+
+    logger.info(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({accuracy:.2f}%)')
 
     return average_loss, accuracy
 
@@ -96,7 +98,6 @@ def train(model, train_loader, valid_loader, criterion, optimizer, args, device)
     for i in range(args.epochs):
         start = time.time()
         logger.info(f"Epoch {i + 1}/{args.epochs}")
-        print(f"Epoch {i + 1}/{args.epochs}")
         if hook:
             hook.set_mode(modes.TRAIN)
 
@@ -137,9 +138,6 @@ def train(model, train_loader, valid_loader, criterion, optimizer, args, device)
         epoch_times.append(epoch_time)
 
         logger.info(
-            f"Epoch {i + 1}/{args.epochs}: train loss {train_loss / len(train_loader)}, val loss {val_loss / len(valid_loader)}, in {epoch_time} sec"
-        )
-        print(
             f"Epoch {i + 1}/{args.epochs}: train loss {train_loss / len(train_loader)}, val loss {val_loss / len(valid_loader)}, in {epoch_time} sec"
         )
     return model
@@ -201,6 +199,10 @@ def main(args):
     logger.info(f"Using device {device}")
     model = net(layer_size=args.fc_layer_size)
     model.to(device)  # Move model to the correct device
+
+    hook = get_hook(create_if_not_exists=True)
+    if hook:
+        hook.register_hook(model)
 
     train_dir = os.getenv('SM_CHANNEL_TRAIN')
     valid_dir = os.getenv('SM_CHANNEL_VALIDATION')
