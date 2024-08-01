@@ -1,0 +1,40 @@
+name: Manual Workflow
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+  workflow_dispatch:
+
+jobs:
+  test-transition-issue:
+    name: Convert Github Issue to Jira Issue
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Login
+      uses: atlassian/gajira-login@v2
+      env:
+        JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+        JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+        JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        
+    - name: Create NEW JIRA ticket
+      id: create
+      uses: atlassian/gajira-create@v2
+      with:
+        project: CONUPDATE
+        issuetype: Task
+        summary: |
+          Github PR [Assign the ND component]  | Repo: ${{ github.repository }}  | PR# ${{github.event.number}}
+        description: |
+           Repo link: https://github.com/${{ github.repository }}   
+           PR no. ${{ github.event.pull_request.number }} 
+           PR title: ${{ github.event.pull_request.title }}  
+           PR description: ${{ github.event.pull_request.body }}  
+           In addition, please resolve other issues, if any. 
+        fields: '{"components": [{"name":"Github PR"}], "customfield_16449":"https://classroom.udacity.com/", "customfield_16450":"Resolve the PR", "labels": ["github"], "priority":{"id": "4"}}'
+
+    - name: Log created issue
+      run: echo "Issue ${{ steps.create.outputs.issue }} was created"
