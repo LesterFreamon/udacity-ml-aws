@@ -4,6 +4,8 @@ import os
 import sys
 import logging
 import time
+from typing import Any, Dict, Tuple, Optional, List
+
 import numpy as np
 from smdebug import modes
 from smdebug.profiler.utils import str2bool
@@ -11,6 +13,7 @@ from smdebug.pytorch import get_hook
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader
 import torchvision
 import torchvision.models as models
 import torchvision.transforms as transforms
@@ -22,24 +25,42 @@ NUM_CLASSES = 133
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-def setup_logging():
+
+def setup_logging() -> logging.Logger:
+    """Setup Logger"""
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     return logger
+
+
 logger = setup_logging()
 
 
-
-def test(model, test_loader, criterion, device):
+def test(
+    model: nn.Module,
+    test_loader: DataLoader,
+    criterion: torch.nn.modules.loss._Loss,
+    device: torch.device,
+) -> Tuple[float, float]:
     """
-    TODO: Complete this function that can take a model and a
-          testing data loader and will get the test accuray/loss of the model
-          Remember to include any debugging/profiling hooks that you might need
+    Tests the given model using the provided test loader and criterion on the specified device.
+    Returns both the average test loss and the accuracy percentage.
+    Parameters:
+        model (torch.nn.Module): The PyTorch model to be tested.
+        test_loader (torch.utils.data.DataLoader): DataLoader containing the test dataset.
+        criterion (torch.nn.modules.loss._Loss): Loss function to evaluate the model.
+        device (torch.device): The device (CPU or GPU) on which to perform the testing.
+
+    Returns:
+        average_loss (float): The average loss computed over all test batches.
+        accuracy (float): The percentage of correctly predicted instances over the test set.
     """
     hook = get_hook(create_if_not_exists=False)
     logger.info("Start testing")
@@ -47,9 +68,6 @@ def test(model, test_loader, criterion, device):
     if hook:
         hook.set_mode(modes.EVAL)
         hook.register_loss(criterion)
-
-    
-
 
     model.eval()
     model.to(device)
@@ -73,18 +91,24 @@ def test(model, test_loader, criterion, device):
         hook.save_scalar("accuracy", accuracy)
         hook.save_scalar("average_loss", average_loss)
 
-    logger.info(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({accuracy:.2f}%)')
+    logger.info(
+        f"Test set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({accuracy:.2f}%)"
+    )
 
     return average_loss, accuracy
 
 
-
-
-def train(model, train_loader, valid_loader, criterion, optimizer, args, device):
+def train(
+    model: nn.Module,
+    train_loader: DataLoader,
+    valid_loader: DataLoader,
+    criterion: torch.nn.modules.loss._Loss,
+    optimizer: torch.optim.Optimizer,
+    args: argparse.Namespace,
+    device: torch.device,
+) -> nn.Module:
     """
-    TODO: Complete this function that can take a model and
-          data loaders for training and will get train the model
-          Remember to include any debugging/profiling hooks that you might need
+    Trains the given model using the provided training and validation loaders, criterion, and optimizer on the specified device.
     """
     hook = get_hook(create_if_not_exists=True)
 
@@ -141,11 +165,9 @@ def train(model, train_loader, valid_loader, criterion, optimizer, args, device)
             f"Epoch {i + 1}/{args.epochs}: train loss {train_loss / len(train_loader)}, val loss {val_loss / len(valid_loader)}, in {epoch_time} sec"
         )
     return model
-    
-    
 
 
-def net(layer_size: int):
+def net(args):
     """Create the base model used for transfer learning and attach additional layers"""
 
     model = models.resnet50(pretrained=True)
@@ -156,10 +178,10 @@ def net(layer_size: int):
         model.fc.in_features
     )  # Get the number of input features of the last layer of the base model
     classifier = nn.Sequential(
-        nn.Linear(num_features, layer_size),
+        nn.Linear(num_features, args.fc_layer_size),
         nn.ReLU(),
-        nn.Dropout(p=0.2),
-        nn.Linear(layer_size, NUM_CLASSES),
+        nn.Dropout(p=args.dropout_rate),
+        nn.Linear(args.fc_layer_size, NUM_CLASSES),
     )
     model.fc = classifier
     return model
@@ -197,16 +219,16 @@ def main(args):
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device {device}")
-    model = net(layer_size=args.fc_layer_size)
+    model = net(args)
     model.to(device)  # Move model to the correct device
 
     hook = get_hook(create_if_not_exists=True)
     if hook:
         hook.register_hook(model)
 
-    train_dir = os.getenv('SM_CHANNEL_TRAIN')
-    valid_dir = os.getenv('SM_CHANNEL_VALIDATION')
-    test_dir = os.getenv('SM_CHANNEL_TEST')
+    train_dir = os.getenv("SM_CHANNEL_TRAIN")
+    valid_dir = os.getenv("SM_CHANNEL_VALIDATION")
+    test_dir = os.getenv("SM_CHANNEL_TEST")
 
     logger.info(f"Creating data loaders")
 
@@ -219,36 +241,29 @@ def main(args):
     test_loader = create_data_loaders(test_dir, args.batch_size, is_train=False)
     logger.info(f"Test loader has {len(test_loader)} batches")
 
-    """
-    TODO: Create your loss and optimizer
-    """
+    # Create your loss and optimizer
     loss_criterion = nn.CrossEntropyLoss()
-    if args.optimizer.lower() == 'adam':
+    if args.optimizer.lower() == "adam":
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
-    elif args.optimizer.lower() == 'sgd':
+    elif args.optimizer.lower() == "sgd":
         optimizer = optim.SGD(model.parameters(), lr=args.learning_rate)
-    elif args.optimizer.lower() == 'rmsprop':
+    elif args.optimizer.lower() == "rmsprop":
         optimizer = optim.RMSprop(model.parameters(), lr=args.learning_rate)
     else:
         raise ValueError(f"Unsupported optimizer: {args.optimizer}")
+    
+    # train the model
+    model = train(
+        model, train_loader, val_loader, loss_criterion, optimizer, args, device
+    )
 
-    """
-    TODO: Call the train function to start training your model
-    Remember that you will need to set up a way to get training data from S3
-    """
-    model = train(model, train_loader, val_loader, loss_criterion, optimizer, args, device)
-
-    """
-    TODO: Test the model to see its accuracy
-    """
+    # Test the model to see its accuracy
     test_loss, test_accuracy = test(model, test_loader, loss_criterion, device)
 
     logger.info(f"Test Loss: {test_loss}")
     logger.info(f"Test Accuracy: {test_accuracy}")
 
-    """
-    TODO: Save the trained model
-    """
+    # Save the trained model
     torch.save(model.state_dict(), os.path.join(args.model_dir, "model.pth"))
 
 
@@ -257,16 +272,21 @@ if __name__ == "__main__":
     """
     TODO: Specify all the hyperparameters you need to use to train your model.
     """
-    parser.add_argument('--s3_data_path', type=str, default='s3://udacity-ml-aws/dogImages',
-                        help='S3 path to the training data')
-    parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--learning_rate', type=float, default=0.001)
-    parser.add_argument('--epochs', type=int, default=20)
-    parser.add_argument('--dropout_rate', type=float, default=0.2)
-    parser.add_argument('--optimizer', type=str, default='adam')
-    parser.add_argument('--fc_layer_size', type=int, default=128)
-    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', '/opt/ml/model'))
-
+    parser.add_argument(
+        "--s3_data_path",
+        type=str,
+        default="s3://udacity-ml-aws/dogImages",
+        help="S3 path to data",
+    )
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--learning_rate", type=float, default=0.001)
+    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--dropout_rate", type=float, default=0.2)
+    parser.add_argument("--optimizer", type=str, default="adam")
+    parser.add_argument("--fc_layer_size", type=int, default=128)
+    parser.add_argument(
+        "--model_dir", type=str, default=os.environ.get("SM_MODEL_DIR", "/opt/ml/model")
+    )
 
     args = parser.parse_args()
 
