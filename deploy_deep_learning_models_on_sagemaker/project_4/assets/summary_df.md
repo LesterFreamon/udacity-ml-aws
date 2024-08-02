@@ -1,0 +1,10 @@
+| batch_size   |   dropout_rate | fc_layer_size   |   learning_rate | optimizer   | TrainingJobName                           | TrainingJobStatus   |   FinalObjectiveValue |   TrainingElapsedTimeSeconds |
+|:-------------|---------------:|:----------------|----------------:|:------------|:------------------------------------------|:--------------------|----------------------:|-----------------------------:|
+| "128"        |          0.5   | "512"           |     0.001       | "rmsprop"   | pytorch-training-240801-1924-008-3239818c | Completed           |                 77.99 |                          460 |
+| "128"        |          0.5   | "256"           |     0.001       | "rmsprop"   | pytorch-training-240801-1924-007-42fa60cf | Completed           |                 63.28 |                          463 |
+| "128"        |          0.473 | "512"           |     0.000119052 | "adam"      | pytorch-training-240801-1924-006-a76a076a | Completed           |                 71.41 |                          461 |
+| "64"         |          0.492 | "256"           |     0.000840304 | "rmsprop"   | pytorch-training-240801-1924-005-cee15837 | Completed           |                 76.32 |                          460 |
+| "128"        |          0.495 | "256"           |     0.000510019 | "rmsprop"   | pytorch-training-240801-1924-004-a572276c | Completed           |                 73.56 |                          658 |
+| "128"        |          0.463 | "256"           |     1.9529e-05  | "adam"      | pytorch-training-240801-1924-003-950e7a6c | Completed           |                 22.61 |                          672 |
+| "128"        |          0.42  | "256"           |     0.000329616 | "rmsprop"   | pytorch-training-240801-1924-002-d813dd15 | Completed           |                 71.77 |                          668 |
+| "64"         |          0.353 | "256"           |     7.93443e-05 | "rmsprop"   | pytorch-training-240801-1924-001-cd94c0a3 | Completed           |                 67.11 |                          663 |

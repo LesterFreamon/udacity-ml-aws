@@ -1,0 +1,6 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/opt/amazon/sagemaker/sagemaker-code-editor-server-data/extensions/continue.continue-0.1.3-universal"
+    ],
+    "livePreview.defaultPreviewPath": "/deploy_deep_learning_models_on_sagemaker/project_4/frontend/public/index.html"
+}

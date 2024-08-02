@@ -166,3 +166,7 @@ udacity-nd009t-C2-Developing-ML-Workflow-master/data/aclImdb/test/
 udacity-nd009t-C2-Developing-ML-Workflow-master/data/aclImdb/train/
 udacity-nd009t-C2-Developing-ML-Workflow-master/data/aclImdb/imdb.vocab
 udacity-nd009t-C2-Developing-ML-Workflow-master/data/aclImdb/imdbEr.txt
+*/project_4/data/
+
+# react
+node_modules/
