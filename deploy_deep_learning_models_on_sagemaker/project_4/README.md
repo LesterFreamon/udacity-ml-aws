@@ -73,13 +73,13 @@ The best hyperparameters were:
 **TODO**: Give an overview of how you performed model debugging and profiling in Sagemaker
 
 __Adam:__ 
-_Honestly, I kinda patched things together until it kinda worked. I used cloudwatch to look at the logging. I added profiling and debugging using sagemaker packages and then created a Profiler with it. This part was a bit fuzzy, and I'm not sure I have mastered it yet._ 
+_First you set the things that you want to monitor in rules, like overfitting and vanishing gradient. You also set whether you want a profiler report. Then, you set the cadency of tracking (every how many steps). Lastly, you add hooks in your script to catch specific metrics, like training and validation losses. There are many more options that you can add and customize._ 
 
 ### Results
 **TODO**: What are the results/insights did you get by profiling/debugging your model?
 
 __Adam:__
-_First, it was clear that the 128 layers (I tried it previously) wasn't working, which was interesting. Also, I was surprised that such a high dropout value performed the best. It indicates how susceptible these models are to overfit, and why dropout is so important. Lastly, not exactly an insight, but gpus are totally necessary. From my check they were around x100 faster than cpus._
+_First, it was clear that the 128 layers (I tried it previously) wasn't working, which was interesting. Also, I was surprised that such a high dropout value performed the best. It indicates how susceptible these models are to overfit, and why dropout is so important. Lastly, not exactly an insight, but gpus are totally necessary. From my check they were around x100 faster than cpus. From the profiling, I learned that I wasn't allocating enough memory for the training jobs, and that the batches were too small to utilize the full potential of the gpu. Very helpful!!_
 
 **TODO** Remember to provide the profiler html/pdf file in your submission.
 
@@ -89,8 +89,24 @@ _I have included the profiler report in the submission._
 
 ## Model Deployment
 **TODO**: Give an overview of the deployed model and instructions on how to query the endpoint with a sample input.
+__Adam:__
+_You need to use
+```python
+def predict_and_show(img_path: str, label_number: int, label_name: str, predictor: ImagePredictor) -> None:
+    """
+    Show image and prediction
+    """
+```
+and you will get a response like 
+
+![Prediction Example](assets/prediction_example.png)
 
 **TODO** Remember to provide a screenshot of the deployed active endpoint in Sagemaker.
+![Endpoint](assets/endpoint.png)
+
 
 ## Standout Suggestions
 **TODO (Optional):** This is where you can provide information about any standout suggestions that you have attempted.
+
+__Adam:__
+_I started building a react app so that it would be easier to interact with the model, but decided to leave it for now... so... almost standout_
