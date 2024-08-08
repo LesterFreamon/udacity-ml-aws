@@ -92,15 +92,21 @@ def train(model, train_loader, validation_loader, criterion, optimizer, device):
     return model
     
 def net():
+    logger.info('Inside net function')
     model = models.resnet50(pretrained=True)
+    logger.info('Loaded pretrained ResNet50')
 
     for param in model.parameters():
         param.requires_grad = False   
 
+    logger.info('Freezing model parameters')
+
     model.fc = nn.Sequential(
                    nn.Linear(2048, 128),
-                   nn.ReLU(inplace=True),
+                   nn.ReLU(),
                    nn.Linear(128, 133))
+
+    logger.info('Modified model fully connected layer')
     return model
 
 def create_data_loaders(data, batch_size):
@@ -119,8 +125,11 @@ def create_data_loaders(data, batch_size):
         transforms.ToTensor(),
         ])
 
+    logger.info(f"Attempt to create training loader, loading from  path: {train_data_path}")
+
     train_data = torchvision.datasets.ImageFolder(root=train_data_path, transform=train_transform)
     train_data_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
+    logger.info(f"Created training loader when loaded from path: {train_data_path}")
 
     test_data = torchvision.datasets.ImageFolder(root=test_data_path, transform=test_transform)
     test_data_loader  = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=True)
@@ -132,16 +141,28 @@ def create_data_loaders(data, batch_size):
 
 def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.info(f'the device is: {device}')
 
     logger.info(f'Hyperparameters are LR: {args.learning_rate}, Batch Size: {args.batch_size}')
+    
+
     logger.info(f'Data Paths: {args.data}')
     
     train_loader, test_loader, validation_loader=create_data_loaders(args.data, args.batch_size)
-    model=net()
+    logger.info('Created Loaders')
+
+
+    model = net()
+    logger.info('Created Model')
+
     model.to(device)  # Move model to the correct device
+
+    logger.info('Moved model to device')
 
     
     criterion = nn.CrossEntropyLoss(ignore_index=133)
+    logger.info('Created Criterion')
+
     optimizer = optim.Adam(model.fc.parameters(), lr=args.learning_rate)
     
     logger.info("Starting Model Training")
@@ -151,22 +172,17 @@ def main(args):
     test(model, test_loader, criterion, device)
     
     logger.info("Saving Model")
-    torch.save(model.cpu().state_dict(), os.path.join(args.model_dir, "model.pth"))
+    torch.save(model.state_dict(), os.path.join(args.model_dir, "model.pth"))
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('--learning_rate', type=float)
     parser.add_argument('--batch_size', type=int)
-    parser.add_argument('--data', type=str, default=os.environ['SM_CHANNEL_TRAINING'])
-    parser.add_argument('--model_dir', type=str, default=os.environ['SM_MODEL_DIR'])
-    parser.add_argument('--output_dir', type=str, default=os.environ['SM_OUTPUT_DATA_DIR'])
-    
     args=parser.parse_args()
-    # Print environment variables for debugging
-    print("Environment Variables:")
-    print("SM_CHANNEL_TRAINING:", os.environ.get('SM_CHANNEL_TRAINING', ''))
-    print("SM_MODEL_DIR:", os.environ.get('SM_MODEL_DIR', ''))
-    print("SM_OUTPUT_DATA_DIR:", os.environ.get('SM_OUTPUT_DATA_DIR', ''))
+
+    args.data = os.getenv('SM_CHANNEL_TRAINING')
+    args.model_dir = os.getenv('SM_MODEL_DIR')
+    args.output_dir = os.getenv('SM_OUTPUT_DATA_DIR')
 
     print(args)    
     main(args)
