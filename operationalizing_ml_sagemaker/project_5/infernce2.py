@@ -26,7 +26,7 @@ def Net():
 
     model.fc = nn.Sequential(
                    nn.Linear(2048, 128),
-                   nn.ReLU(inplace=True),
+                   nn.ReLU(),
                    nn.Linear(128, 133))
     return model
 
@@ -86,6 +86,7 @@ def predict_fn(input_object, model):
     with torch.no_grad():
         logger.info("Calling model")
         prediction = model(input_object.unsqueeze(0))
+        logger.info("Called model")
     return prediction
 
 '''
